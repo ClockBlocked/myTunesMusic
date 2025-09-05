@@ -10,14 +10,14 @@ import {
   NOTIFICATION_TYPES,
   $,
   $byId
-} from "./siteMap.js";
+} from "./map.js";
 import {
   music
-} from "../modules/library.js";
+} from "../global/content/audio/script/index.js";
 import {
   render,
   create
-} from "../pageModules/blocks.js";
+} from "./utilities/pages/templates.js";
 
 // Core application state management - contains all player and UI state
 class AppState {
