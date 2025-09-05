@@ -19,59 +19,36 @@ import {
   create
 } from "./utilities/pages/templates.js";
 
-// Core application state management - contains all player and UI state
 class AppState {
   constructor() {
-    // HTML5 Audio instance for playback
     this.audio = null;
-
-    // Current song metadata - CRITICAL for album cover and song info updates
     this.currentSong = null;
     this.currentArtist = null;
     this.currentAlbum = null;
-
-    // Playback state management - drives play/pause button updates
     this.isPlaying = false;
     this.duration = 0;
-
-    // Music queue and playback history
     this.queue = [];
     this.recentlyPlayed = [];
     this.isDragging = false;
-
-    // Player control modes
     this.shuffleMode = false;
     this.repeatMode = REPEAT_MODES.OFF;
-
-    // UI progress tracking
     this.seekTooltip = null;
     this.currentIndex = 0;
-
-    // User data collections
     this.playlists = [];
-
-    // UI state tracking
     this.isPopupVisible = false;
     this.currentTab = "now-playing";
     this.inactivityTimer = null;
-
-    // Notification system state
     this.notificationContainer = null;
     this.notifications = [];
     this.currentNotificationTimeout = null;
-
-    // Core application instances
     this.siteMapInstance = null;
     this.homePageManagerInstance = null;
   }
 
-  // Comprehensive favorites management system - handles songs, artists, albums
   favorites = {
     songs: new Set(),
     artists: new Set(),
     albums: new Set(),
-
-    // Add item to favorites with UI feedback
     add: (type, id) => {
       this.favorites[type].add(id);
       this.favorites.save(type);
@@ -79,8 +56,6 @@ class AppState {
       const itemName = type === "songs" ? "song" : type.slice(0, -1);
       notifications.show(`Added ${itemName} to favorites`, NOTIFICATION_TYPES.SUCCESS);
     },
-
-    // Remove item from favorites with UI feedback
     remove: (type, id) => {
       this.favorites[type].delete(id);
       this.favorites.save(type);
@@ -88,8 +63,6 @@ class AppState {
       const itemName = type === "songs" ? "song" : type.slice(0, -1);
       notifications.show(`Removed ${itemName} from favorites`, NOTIFICATION_TYPES.INFO);
     },
-
-    // Toggle favorite status - returns new state
     toggle: (type, id) => {
       if (this.favorites[type].has(id)) {
         this.favorites.remove(type, id);
@@ -99,24 +72,16 @@ class AppState {
         return true;
       }
     },
-
-    // Check if item is in favorites
     has: (type, id) => this.favorites[type].has(id),
-
-    // Persist favorites to localStorage
     save: (type) => {
       const key = type === "songs" ? STORAGE_KEYS.FAVORITE_SONGS : type === "artists" ? STORAGE_KEYS.FAVORITE_ARTISTS : STORAGE_KEYS.FAVORITE_ALBUMS;
       storage.save(key, Array.from(this.favorites[type]));
     },
-
-    // Update all favorite heart icons across the interface
     updateIcon: (type, id, isFavorite) => {
       const icons = document.querySelectorAll(`[data-favorite-${type}="${id}"]`);
       icons.forEach((icon) => {
         icon.classList.toggle(CLASSES.active, isFavorite);
         icon.setAttribute("aria-pressed", isFavorite);
-
-        // Update heart icon visual styling for songs
         if (type === "songs") {
           const heartIcon = icon.querySelector("svg");
           if (heartIcon) {
@@ -125,19 +90,14 @@ class AppState {
           }
         }
       });
-
-      // Update current song favorite button in popup
       if (type === "songs" && appState.currentSong && appState.currentSong.id === id) {
         ui.updateFavoriteButton();
       }
     },
   };
 
-  // Advanced queue management system
   queue = {
     items: [],
-
-    // Add song to queue at specific position or end
     add: (song, position = null) => {
       if (position !== null) {
         this.queue.items.splice(position, 0, song);
@@ -148,8 +108,6 @@ class AppState {
       ui.updateCounts();
       notifications.show(`Added "${song.title}" to queue`);
     },
-
-    // Remove song from queue by index
     remove: (index) => {
       if (index >= 0 && index < this.queue.items.length) {
         const removed = this.queue.items.splice(index, 1)[0];
@@ -159,23 +117,15 @@ class AppState {
       }
       return null;
     },
-
-    // Clear entire queue
     clear: () => {
       this.queue.items = [];
       storage.save(STORAGE_KEYS.QUEUE, this.queue.items);
       ui.updateCounts();
     },
-
-    // Get next song from queue
     getNext: () => {
       return this.queue.items.length > 0 ? this.queue.remove(0) : null;
     },
-
-    // Get all queue items
     get: () => this.queue.items,
-
-    // Play song at specific queue position
     playAt: (index) => {
       const song = this.queue.remove(index);
       if (song) {
@@ -185,36 +135,27 @@ class AppState {
   };
 }
 
-// Global application state instance
 const appState = new AppState();
 
-// Local storage management with error handling
 const storage = {
-  // Save data to localStorage with JSON serialization
   save: (key, data) => {
     try {
       localStorage.setItem(key, JSON.stringify(data));
       return true;
     } catch (error) {
-      console.error(`Error saving to localStorage (${key}):`, error);
       return false;
     }
   },
-
-  // Load data from localStorage with JSON parsing
   load: (key) => {
     try {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error(`Error loading from localStorage (${key}):`, error);
       return null;
     }
   },
 
-  // Initialize all stored user data on app startup
   initialize: () => {
-    // Load favorites for all types (songs, artists, albums)
     const favoriteTypes = [{
         type: "songs",
         key: STORAGE_KEYS.FAVORITE_SONGS
@@ -239,7 +180,6 @@ const storage = {
       }
     });
 
-    // Load other persistent data
     const dataLoaders = {
       [STORAGE_KEYS.RECENTLY_PLAYED]: (data) => (appState.recentlyPlayed = data || []),
       [STORAGE_KEYS.PLAYLISTS]: (data) => (appState.playlists = data || []),
@@ -253,15 +193,12 @@ const storage = {
   },
 };
 
-// Media Session API integration for system-level media controls
 const mediaSession = {
-  // Initialize media session with action handlers
   setup: () => {
     if (!("mediaSession" in navigator)) return;
 
     navigator.mediaSession.metadata = null;
 
-    // Define all supported media session actions
     const actions = {
       play: () => controls.play(),
       pause: () => controls.pause(),
@@ -272,17 +209,13 @@ const mediaSession = {
       seekforward: (details) => controls.skip(details.seekOffset || 10),
     };
 
-    // Register each action handler
     Object.entries(actions).forEach(([action, handler]) => {
       try {
         navigator.mediaSession.setActionHandler(action, handler);
       } catch (error) {
-        console.warn(`MediaSession action ${action} not supported:`, error);
       }
     });
   },
-
-  // Update system media session with current song metadata
   updateMetadata: (songData) => {
     if (!("mediaSession" in navigator) || !songData) return;
 
@@ -298,11 +231,9 @@ const mediaSession = {
         }, ],
       });
     } catch (error) {
-      console.error("Failed to update MediaSession metadata:", error);
     }
   },
 
-  // Update system playback state indicator
   updatePlaybackState: (playing) => {
     if (!("mediaSession" in navigator)) return;
 
@@ -317,21 +248,16 @@ const mediaSession = {
         });
       }
     } catch (error) {
-      console.warn("Failed to update position state:", error);
     }
   },
 };
 
-// Core audio player functionality - handles all playback operations
 const player = {
-  // Initialize HTML5 audio element with event listeners
   initialize: () => {
     if (appState.audio) return;
 
-    // Create new Audio instance
     appState.audio = new Audio();
 
-    // Bind all audio event handlers
     const events = {
       timeupdate: player.updateProgress,
       ended: player.onEnded,
@@ -345,21 +271,17 @@ const player = {
       appState.audio.addEventListener(event, handler);
     });
 
-    // Set up system media controls
     mediaSession.setup();
   },
 
-  // Load and attempt playback of audio file with format fallbacks
   loadAudioFile: async (songData) => {
     for (const format of AUDIO_FORMATS) {
       try {
-        // Generate normalized filename for audio URL
         const songFileName = songData.title.toLowerCase().replace(/\s+/g, "").replace(/[^\w]/g, "");
         const audioUrl = `https://koders.cloud/global/content/audio/${songFileName}.${format}`;
 
         appState.audio.src = audioUrl;
 
-        // Wait for audio to be ready for playback
         await new Promise((resolve, reject) => {
           const loadHandler = () => {
             appState.audio.removeEventListener("canplaythrough", loadHandler);
@@ -385,51 +307,41 @@ const player = {
           }
         });
 
-        // Start playback
         await appState.audio.play();
         return true;
       } catch (error) {
-        console.error(`Audio playback failed (${format}):`, error);
       }
     }
     return false;
   },
 
-  // Main function to play a new song - CRITICAL FOR FIXING ALBUM COVER AND SONG INFO UPDATES
   playSong: async (songData) => {
     if (!songData) return;
 
-    // Initialize audio if not already done
     player.initialize();
     ui.setLoadingState(true);
 
-    // Add current song to recently played history
     if (appState.currentSong) {
       player.addToRecentlyPlayed(appState.currentSong);
     }
 
-    // Update current song state - CRITICAL for UI updates
     appState.currentSong = songData;
     appState.currentArtist = songData.artist;
     appState.currentAlbum = songData.album;
 
-    // IMMEDIATE UI UPDATES - fixes album cover and song info display issues
-    ui.updateNowPlaying(); // Updates popup song info
-    ui.updateNavbar(); // Updates navbar song info and album cover
-    ui.updateMusicPlayer(); // Updates music player card
-    ui.updateCounts(); // Updates counters
-    mediaSession.updateMetadata(songData); // Updates system media session
+    ui.updateNowPlaying();
+    ui.updateNavbar();
+    ui.updateMusicPlayer();
+    ui.updateCounts();
+    mediaSession.updateMetadata(songData);
 
-    // Load and play the audio file
     const success = await player.loadAudioFile(songData);
 
     if (success) {
-      // Re-bind control events after song change to ensure functionality
       setTimeout(() => {
         eventHandlers.bindControlEvents();
       }, 100);
     } else {
-      // Show error but keep UI updated
       notifications.show("Could not load audio file", NOTIFICATION_TYPES.ERROR);
       appState.isPlaying = false;
       ui.updatePlayPauseButtons();
@@ -438,8 +350,6 @@ const player = {
 
     ui.setLoadingState(false);
   },
-
-  // Toggle play/pause state - main control for play/pause buttons
   toggle: () => {
     if (appState.isPlaying) {
       controls.pause();
@@ -447,36 +357,26 @@ const player = {
       controls.play();
     }
   },
-  // Audio event handler - when playback starts
   onPlay: () => {
     appState.isPlaying = true;
-    ui.updatePlayPauseButtons(); // CRITICAL - updates all play/pause buttons
+    ui.updatePlayPauseButtons();
     mediaSession.updatePlaybackState(true);
   },
-
-  // Audio event handler - when playback pauses
   onPause: () => {
     appState.isPlaying = false;
-    ui.updatePlayPauseButtons(); // CRITICAL - updates all play/pause buttons
+    ui.updatePlayPauseButtons();
     mediaSession.updatePlaybackState(false);
   },
-
-  // Audio event handler - when metadata loads
   onMetadataLoaded: () => {
     appState.duration = appState.audio.duration;
-    const totalTimeElement = $byId(IDS.popupTotalTime);
+    const totalTimeElement = $byId(IDS.totalTime);
     if (totalTimeElement) {
       totalTimeElement.textContent = utils.formatTime(appState.duration);
     }
   },
-
-  // Audio event handler - when error occurs
   onError: (error) => {
-    console.error("Audio error:", error);
     notifications.show("Audio playback error", NOTIFICATION_TYPES.ERROR);
   },
-
-  // Audio event handler - when song ends
   onEnded: () => {
     if (appState.repeatMode === REPEAT_MODES.ONE) {
       appState.audio.currentTime = 0;
@@ -485,18 +385,15 @@ const player = {
     }
     controls.next();
   },
-
-  // Update progress bar and time displays during playback
   updateProgress: () => {
     if (!appState.audio) return;
 
     const currentTime = appState.audio.currentTime;
     const percent = appState.duration > 0 ? (currentTime / appState.duration) * 100 : 0;
 
-    // Update progress bar elements
-    const progressFill = $byId(IDS.popupProgressFill);
-    const progressThumb = $byId(IDS.popupProgressThumb);
-    const currentTimeElement = $byId(IDS.popupCurrentTime);
+    const progressFill = $byId(IDS.progressFill);
+    const progressThumb = $byId(IDS.progressThumb);
+    const currentTimeElement = $byId(IDS.currentTime);
 
     if (progressFill) progressFill.style.width = `${percent}%`;
     if (progressThumb) progressThumb.style.left = `${percent}%`;
@@ -505,7 +402,6 @@ const player = {
     mediaSession.updatePlaybackState(appState.isPlaying);
   },
 
-  // Add song to recently played history
   addToRecentlyPlayed: (song) => {
     appState.recentlyPlayed.unshift(song);
     if (appState.recentlyPlayed.length > 50) {
@@ -513,8 +409,6 @@ const player = {
     }
     storage.save(STORAGE_KEYS.RECENTLY_PLAYED, appState.recentlyPlayed.slice(0, 20));
   },
-
-  // Get next song in current album for sequential playback
   getNextInAlbum: () => {
     if (!appState.currentSong || !window.music) return null;
 
@@ -537,8 +431,6 @@ const player = {
 
     return null;
   },
-
-  // Get previous song in current album
   getPreviousInAlbum: () => {
     if (!appState.currentSong || !window.music) return null;
 
@@ -563,7 +455,7 @@ const player = {
 const controls = {
   play: () => {
     if (!appState.currentSong || !appState.audio) return;
-    appState.audio.play().catch((err) => console.error("Play error:", err));
+    appState.audio.play().catch((err) => 
   },
   pause: () => {
     if (!appState.audio) return;
@@ -576,7 +468,6 @@ const controls = {
       return;
     }
 
-    // Play next song from current album
     const nextInAlbum = player.getNextInAlbum();
     if (nextInAlbum) {
       player.playSong(nextInAlbum);
@@ -611,21 +502,18 @@ const controls = {
   },
 
   shuffle: {
-    // Toggle shuffle mode on/off
     toggle: () => {
       appState.shuffleMode = !appState.shuffleMode;
       ui.updateShuffleButton();
       notifications.show(`Shuffle ${appState.shuffleMode ? "enabled" : "disabled"}`);
     },
 
-    // Shuffle all songs in library and start playback
     all: () => {
       if (!window.music || window.music.length === 0) {
         notifications.show("No music library found", NOTIFICATION_TYPES.WARNING);
         return;
       }
 
-      // Collect all songs from all artists/albums
       const allSongs = [];
       window.music.forEach((artist) => {
         artist.albums.forEach((album) => {
@@ -645,13 +533,11 @@ const controls = {
         return;
       }
 
-      // Shuffle the array using Fisher-Yates algorithm
       for (let i = allSongs.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [allSongs[i], allSongs[j]] = [allSongs[j], allSongs[i]];
       }
 
-      // Set up queue and start playback
       appState.queue.clear();
       allSongs.slice(1).forEach((song) => appState.queue.add(song));
       player.playSong(allSongs[0]);
@@ -662,7 +548,6 @@ const controls = {
   },
 
   repeat: {
-    // Cycle through repeat modes: off -> all -> one -> off
     toggle: () => {
       if (appState.repeatMode === REPEAT_MODES.OFF) {
         appState.repeatMode = REPEAT_MODES.ALL;
@@ -680,9 +565,7 @@ const controls = {
   },
 };
 
-// UI update management - CRITICAL for fixing all display issues
 const ui = {
-  // Set loading state for UI elements
   setLoadingState: (loading) => {
     const nowPlayingArea = $byId(IDS.nowPlayingArea);
     const songTitle = $byId(IDS.navbarSongTitle);
@@ -691,29 +574,24 @@ const ui = {
     if (songTitle) songTitle.textContent = loading ? "Loading..." : appState.currentSong?.title || "";
   },
 
-  // Update now playing popup with current song info - FIXES SONG INFO DISPLAY
   updateNowPlaying: () => {
     if (!appState.currentSong) return;
 
-    // Get all popup elements
     const elements = {
-      albumCover: $byId(IDS.popupAlbumCover),
-      songTitle: $byId(IDS.popupSongTitle),
-      artistName: $byId(IDS.popupArtistName),
-      albumName: $byId(IDS.popupAlbumName),
+      albumCover: $byId(IDS.albumCover),
+      songTitle: $byId(IDS.songTitle),
+      artistName: $byId(IDS.artistName),
+      albumName: $byId(IDS.albumName),
     };
 
-    // Update album cover with fallback - FIXES ALBUM COVER UPDATE ISSUE
     if (elements.albumCover) {
       utils.loadImageWithFallback(elements.albumCover, utils.getAlbumImageUrl(appState.currentSong.album), utils.getDefaultAlbumImage(), "album");
     }
 
-    // Update song information text - FIXES SONG INFO DISPLAY
     if (elements.songTitle) elements.songTitle.textContent = appState.currentSong.title;
     if (elements.artistName) elements.artistName.textContent = appState.currentSong.artist;
     if (elements.albumName) elements.albumName.textContent = appState.currentSong.album;
 
-    // Update control button states
     ui.updatePlayPauseButtons();
     ui.updateFavoriteButton();
   },
@@ -760,61 +638,57 @@ const ui = {
     }
   },
 
-  // Update all play/pause button states - FIXES PLAY/PAUSE BUTTON ISSUES
   updatePlayPauseButtons: () => {
-    // Update navbar play/pause icons
     const navbarElements = {
       playIcon: $byId(IDS.playIconNavbar),
       pauseIcon: $byId(IDS.pauseIconNavbar),
     };
 
-    // Update popup play/pause icons
     const popupElements = {
-      playIcon: $byId(IDS.popupPlayIcon),
-      pauseIcon: $byId(IDS.popupPauseIcon),
+      playBtn: $byId(IDS.playBtn),
     };
 
-    // Toggle navbar icons based on playing state
     if (navbarElements.playIcon && navbarElements.pauseIcon) {
       navbarElements.playIcon.style.display = appState.isPlaying ? "none" : "block";
       navbarElements.pauseIcon.style.display = appState.isPlaying ? "block" : "none";
     }
 
-    // Toggle popup icons based on playing state
-    if (popupElements.playIcon && popupElements.pauseIcon) {
-      popupElements.playIcon.classList.toggle(CLASSES.hidden, appState.isPlaying);
-      popupElements.pauseIcon.classList.toggle(CLASSES.hidden, !appState.isPlaying);
+    if (popupElements.playBtn) {
+      const playIcon = popupElements.playBtn.querySelector('.icon.play');
+      const pauseIcon = popupElements.playBtn.querySelector('.icon.pause');
+      if (playIcon && pauseIcon) {
+        playIcon.classList.toggle(CLASSES.hidden, appState.isPlaying);
+        pauseIcon.classList.toggle(CLASSES.hidden, !appState.isPlaying);
+      }
+      popupElements.playBtn.classList.toggle(CLASSES.playing, appState.isPlaying);
+    }
     }
   },
 
-  // Update shuffle button active state
   updateShuffleButton: () => {
-    const shuffleBtn = $byId(IDS.popupShuffleBtn);
+    const shuffleBtn = $byId(IDS.shuffleBtn);
     if (shuffleBtn) {
       shuffleBtn.classList.toggle(CLASSES.active, appState.shuffleMode);
     }
   },
 
-  // Update repeat button state and visual indicator
   updateRepeatButton: () => {
-    const repeatBtn = $byId(IDS.popupRepeatBtn);
+    const repeatBtn = $byId(IDS.repeatBtn);
     if (repeatBtn) {
       repeatBtn.classList.toggle(CLASSES.active, appState.repeatMode !== REPEAT_MODES.OFF);
       repeatBtn.classList.toggle(CLASSES.repeatOne, appState.repeatMode === REPEAT_MODES.ONE);
     }
   },
 
-  // Update favorite heart button state
   updateFavoriteButton: () => {
     if (!appState.currentSong) return;
 
-    const favoriteBtn = $byId(IDS.popupFavoriteBtn);
+    const favoriteBtn = $byId(IDS.favoriteBtn);
     if (favoriteBtn) {
       const isFavorite = appState.favorites.has("songs", appState.currentSong.id);
       favoriteBtn.classList.toggle(CLASSES.active, isFavorite);
       favoriteBtn.setAttribute("data-favorite-songs", appState.currentSong.id);
 
-      // Update heart icon color
       const heartIcon = favoriteBtn.querySelector("svg");
       if (heartIcon) {
         heartIcon.style.color = isFavorite ? "#ef4444" : "";
@@ -823,7 +697,6 @@ const ui = {
     }
   },
 
-  // Update various counters in the UI
   updateCounts: () => {
     const counts = {
       [IDS.favoriteSongsCount]: appState.favorites.songs.size,
@@ -838,7 +711,6 @@ const ui = {
     });
   },
 
-  // Update music player card - FIXES MUSIC PLAYER CARD DISPLAY
   updateMusicPlayer: () => {
     ui.updateNowPlaying();
     ui.updateShuffleButton();
@@ -846,9 +718,7 @@ const ui = {
   },
 };
 
-// Music player popup controls
 const popup = {
-  // Open the main music player popup
   open: () => {
     const musicPlayer = $byId(IDS.musicPlayer);
     if (!musicPlayer) return;
@@ -857,7 +727,6 @@ const popup = {
     popup.startInactivityTimer();
   },
 
-  // Close the main music player popup
   close: () => {
     const musicPlayer = $byId(IDS.musicPlayer);
     if (!musicPlayer) return;
@@ -866,7 +735,6 @@ const popup = {
     popup.clearInactivityTimer();
   },
 
-  // Toggle popup open/closed state
   toggle: () => {
     const musicPlayer = $byId(IDS.musicPlayer);
     if (!musicPlayer) return;
@@ -877,24 +745,20 @@ const popup = {
     }
   },
 
-  // Switch between popup tabs (now-playing, queue, recent)
   switchTab: (tabName) => {
     appState.currentTab = tabName;
   },
 
-  // Update queue tab content
   updateQueueTab: () => {
     const queueList = $byId(IDS.queueList);
     if (!queueList) return;
   },
 
-  // Update recent tab content
   updateRecentTab: () => {
     const recentList = $byId(IDS.recentList);
     if (!recentList) return;
   },
 
-  // Start inactivity timer for auto-tab switching
   startInactivityTimer: () => {
     popup.clearInactivityTimer();
     if (appState.currentTab !== "now-playing") {
@@ -904,7 +768,6 @@ const popup = {
     }
   },
 
-  // Clear inactivity timer
   clearInactivityTimer: () => {
     if (appState.inactivityTimer) {
       clearTimeout(appState.inactivityTimer);
@@ -913,9 +776,7 @@ const popup = {
   },
 };
 
-// Dropdown menu controls - handles main navigation menu
 const dropdown = {
-  // Toggle dropdown menu visibility - main menu trigger
   toggle: (e) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -933,7 +794,6 @@ const dropdown = {
     }
   },
 
-  // Open dropdown menu with counts update
   open: (e) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -948,7 +808,6 @@ const dropdown = {
     popup.close();
   },
 
-  // Close dropdown menu
   close: (e) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -962,7 +821,6 @@ const dropdown = {
   },
 };
 
-// Simple modal manager using the HTML dialog element
 const modals = {
   open: (id, content) => {
     let dialog = document.getElementById(id);
@@ -1074,9 +932,7 @@ const uiDialog = {
   }
 };
 
-// Comprehensive playlist management system
 const playlists = {
-  // Add new playlist with validation
   add: (name) => {
     if (!name || !name.trim()) {
       notifications.show("Please enter a playlist name", NOTIFICATION_TYPES.WARNING);
@@ -1099,7 +955,6 @@ const playlists = {
     return playlist;
   },
 
-  // Add song to specific playlist
   addSong: (playlistId, song) => {
     const playlist = appState.playlists.find((p) => p.id === playlistId);
     if (!playlist) {
@@ -1120,7 +975,6 @@ const playlists = {
     return true;
   },
 
-  // Remove song from playlist
   removeSong: (playlistId, songId) => {
     const playlist = appState.playlists.find((p) => p.id === playlistId);
     if (!playlist) return false;
@@ -1138,7 +992,6 @@ const playlists = {
   },
 
 
-  // Play entire playlist
   play: (playlistId) => {
     const playlist = appState.playlists.find((p) => p.id === playlistId);
     if (!playlist || playlist.songs.length === 0) {
@@ -1178,7 +1031,6 @@ const playlists = {
   },
 
 
-  // Show all playlists in a modal
   showAll: () => {
     if (appState.playlists.length === 0) {
       modals.open(
@@ -1247,7 +1099,6 @@ const playlists = {
     playlists.bindEvents(modalEl);
   },
 
-  // Show individual playlist detail page
   show: (playlistId) => {
     const playlist = appState.playlists.find((p) => p.id === playlistId);
     if (!playlist) {
@@ -1368,12 +1219,10 @@ const playlists = {
     }, 300);
   },
 
-  // Bind events for playlist overview page
   bindEvents: (root = $byId(IDS.dynamicContent)) => {
     const dynamicContent = root;
     if (!dynamicContent) return;
 
-    // Create playlist button
     const createBtn = dynamicContent.querySelector(".create-playlist-btn");
     if (createBtn) {
       createBtn.addEventListener("click", () => {
@@ -1384,7 +1233,6 @@ const playlists = {
       });
     }
 
-    // View playlist buttons
     dynamicContent.querySelectorAll(".view-playlist-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1393,7 +1241,6 @@ const playlists = {
       });
     });
 
-    // Play playlist buttons
     dynamicContent.querySelectorAll(".play-playlist-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1402,7 +1249,6 @@ const playlists = {
       });
     });
 
-    // Delete playlist buttons
     dynamicContent.querySelectorAll(".delete-playlist-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1413,7 +1259,6 @@ const playlists = {
       });
     });
 
-    // Playlist card clicks
     dynamicContent.querySelectorAll(".playlist-card").forEach((card) => {
       card.addEventListener("click", () => {
         const playlistId = card.dataset.playlistId;
@@ -1422,12 +1267,10 @@ const playlists = {
     });
   },
 
-  // Bind events for individual playlist view
   bindViewEvents: (playlist) => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
 
-    // Play playlist button
     const playBtn = dynamicContent.querySelector(".play-playlist-btn");
     if (playBtn) {
       playBtn.addEventListener("click", () => {
@@ -1435,7 +1278,6 @@ const playlists = {
       });
     }
 
-    // Edit playlist button
     const editBtn = dynamicContent.querySelector(".edit-playlist-btn");
     if (editBtn) {
       editBtn.addEventListener("click", () => {
@@ -1449,7 +1291,6 @@ const playlists = {
       });
     }
 
-    // Delete playlist button
     const deleteBtn = dynamicContent.querySelector(".delete-playlist-btn");
     if (deleteBtn) {
       deleteBtn.addEventListener("click", () => {
@@ -1461,7 +1302,6 @@ const playlists = {
       });
     }
 
-    // Browse music button (for empty playlists)
     const browseBtn = dynamicContent.querySelector(".browse-music-btn");
     if (browseBtn) {
       browseBtn.addEventListener("click", () => {
@@ -1471,7 +1311,6 @@ const playlists = {
       });
     }
 
-    // Song rows
     dynamicContent.querySelectorAll(".song-row").forEach((row) => {
       row.addEventListener("click", (e) => {
         if (e.target.closest(".action-btn") || e.target.closest(".play-song-btn")) return;
@@ -1480,12 +1319,11 @@ const playlists = {
           const songData = JSON.parse(row.dataset.song);
           player.playSong(songData);
         } catch (error) {
-          console.error("Error playing song:", error);
+          
         }
       });
     });
 
-    // Play song buttons
     dynamicContent.querySelectorAll(".play-song-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1494,12 +1332,11 @@ const playlists = {
           const songData = JSON.parse(songRow.dataset.song);
           player.playSong(songData);
         } catch (error) {
-          console.error("Error playing song:", error);
+          
         }
       });
     });
 
-    // Artist names
     dynamicContent.querySelectorAll("[data-artist]").forEach((artistEl) => {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1512,7 +1349,6 @@ const playlists = {
       });
     });
 
-    // Action buttons
     dynamicContent.querySelectorAll(".action-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1546,9 +1382,7 @@ const playlists = {
 
 
 
-// Theme management system
 const theme = {
-  // Toggle between dark/medium/light themes
   toggle: () => {
     const html = document.documentElement;
 
@@ -1568,7 +1402,6 @@ const theme = {
     }
   },
 
-  // Update theme toggle icon based on current theme
   updateIcon: (currentTheme) => {
     const themeToggle = $byId(IDS.themeToggle);
     if (themeToggle) {
@@ -1576,7 +1409,6 @@ const theme = {
     }
   },
 
-  // Initialize theme from saved preference
   initialize: () => {
     const savedTheme = storage.load(STORAGE_KEYS.THEME_PREFERENCE);
     if (savedTheme) {
@@ -1594,13 +1426,11 @@ const theme = {
   },
 };
 
-// Comprehensive notification system
 const notifications = {
   container: null,
   items: [],
   currentTimeout: null,
 
-  // Initialize notification container
   initialize: () => {
     if (notifications.container) return;
 
@@ -1609,7 +1439,6 @@ const notifications = {
     document.body.appendChild(notifications.container);
   },
 
-  // Show notification with auto-dismiss and optional undo functionality
   show: (message, type = NOTIFICATION_TYPES.INFO, undoCallback = null) => {
     notifications.initialize();
 
@@ -1659,7 +1488,6 @@ const notifications = {
     return notification;
   },
 
-  // Remove notification with animation
   remove: (element) => {
     element.style.transition = "all 0.3s ease";
     element.style.opacity = "0";
@@ -1673,9 +1501,7 @@ const notifications = {
   },
 };
 
-// Utility functions for formatting, image handling, etc.
 const utils = {
-  // Format seconds to MM:SS time format
   formatTime: (seconds) => {
     if (isNaN(seconds) || seconds < 0) return "0:00";
     const minutes = Math.floor(seconds / 60);
@@ -1683,7 +1509,6 @@ const utils = {
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   },
 
-  // Normalize text for URL/filename use
   normalizeForUrl: (text) => {
     return text
       .toString()
@@ -1693,36 +1518,30 @@ const utils = {
       .replace(/\s+/g, "");
   },
 
-  // Get album cover image URL with normalization
   getAlbumImageUrl: (albumName) => {
     if (!albumName) return utils.getDefaultAlbumImage();
     const normalized = utils.normalizeForUrl(albumName);
     return `https://koders.cloud/global/content/images/albumCovers/${normalized}.png`;
   },
 
-  // Get artist portrait image URL
   getArtistImageUrl: (artistName) => {
     if (!artistName) return utils.getDefaultArtistImage();
     const normalized = utils.normalizeForUrl(artistName);
     return `https://koders.cloud/global/content/images/artistPortraits/${normalized}.png`;
   },
 
-  // Get default album cover image
   getDefaultAlbumImage: () => {
     return "https://koders.cloud/global/content/images/albumCovers/default-album.png";
   },
 
-  // Get default artist portrait image
   getDefaultArtistImage: () => {
     return "https://koders.cloud/global/content/images/artistPortraits/default-artist.png";
   },
 
-  // Get total songs count for an artist
   getTotalSongs: (artist) => {
     return artist.albums.reduce((total, album) => total + album.songs.length, 0);
   },
 
-  // Load image with fallback handling - CRITICAL for album cover updates
   loadImageWithFallback: (imgElement, primaryUrl, fallbackUrl, type = "image") => {
     if (!imgElement) return;
 
@@ -1757,7 +1576,6 @@ const utils = {
     testImage.src = primaryUrl;
   },
 
-  // Generate SVG placeholder for failed image loads
   generatePlaceholder: (type) => {
     const isArtist = type === "artist";
     const bgColor = isArtist ? "#4F46E5" : "#059669";
@@ -1776,25 +1594,21 @@ const utils = {
   },
 };
 
-// Comprehensive event handling system - CRITICAL for fixing control issues
 const eventHandlers = {
-  // Initialize all event handlers
   init: () => {
-    console.log("Initializing event handlers...");
+    
     eventHandlers.bindMenus();
     eventHandlers.bindControls();
     eventHandlers.bindPopups();
     eventHandlers.bindProgress();
     eventHandlers.bindKeyboard();
     eventHandlers.bindDocument();
-    console.log("Event handlers initialized");
+    
   },
 
-  // Bind navbar and main control events - CRITICAL for play/pause functionality
   bindControls: () => {
-    console.log("Binding control events...");
+    
 
-    // Main control elements mapping
     const controlElements = {
       [IDS.playPauseNavbar]: player.toggle, // Play/pause button in navbar
       [IDS.prevBtnNavbar]: player.previous, // Previous track button in navbar
@@ -1804,42 +1618,39 @@ const eventHandlers = {
 
     Object.entries(controlElements).forEach(([id, handler]) => {
       const element = $byId(id);
-      console.log(`Binding ${id}:`, !!element);
+      
 
       if (element) {
-        // Remove existing listeners to prevent duplicates
         element.removeEventListener("click", handler);
         element.addEventListener("click", (e) => {
-          console.log(`${id} clicked!`);
+          
           e.stopPropagation();
 
           try {
             handler();
           } catch (error) {
-            console.error(`Error in ${id} handler:`, error);
+            
           }
         });
 
-        console.log(`Successfully bound ${id}`);
+        
       } else {
-        console.warn(`Element not found: ${id}`);
+        
       }
     });
 
-    // Bind navbar album cover click to open popup - FIXES popup opening issue
     const navbarAlbumCover = $byId(IDS.navbarAlbumCover);
     if (navbarAlbumCover) {
       navbarAlbumCover.removeEventListener("click", popup.toggle);
       navbarAlbumCover.addEventListener("click", (e) => {
-        console.log("Navbar album cover clicked!");
+        
         e.stopPropagation();
         popup.toggle();
       });
-      console.log("Navbar album cover event bound");
+      
     }
   },
 
-  // Bind dropdown menu events - hamburger menu functionality
   bindMenus: () => {
     const menuElements = {
       [IDS.menuTrigger]: dropdown.toggle, // Main menu trigger (hamburger icon)
@@ -1855,7 +1666,6 @@ const eventHandlers = {
       }
     });
 
-    // Menu action items
     const menuActions = {
       [IDS.favoriteSongs]: () => { // Favorite songs menu item
         dropdown.close();
@@ -1899,16 +1709,15 @@ const eventHandlers = {
     });
   },
 
-  // Bind popup/now playing control events - music player popup functionality
   bindPopups: () => {
     const popupControls = {
-      [IDS.popupClose]: popup.close, // Close popup button
-      [IDS.popupPlayPauseBtn]: player.toggle, // Play/pause in popup - CRITICAL
-      [IDS.popupPrevBtn]: player.previous, // Previous track in popup
-      [IDS.popupNextBtn]: player.next, // Next track in popup
-      [IDS.popupShuffleBtn]: controls.shuffle.toggle, // Shuffle button in popup
-      [IDS.popupRepeatBtn]: controls.repeat.toggle, // Repeat button in popup
-      [IDS.popupFavoriteBtn]: () => { // Favorite heart button in popup
+      [IDS.closeBtn]: popup.close, // Close popup button
+      [IDS.playBtn]: player.toggle, // Play/pause in popup - CRITICAL
+      [IDS.prevBtn]: player.previous, // Previous track in popup
+      [IDS.nextBtn]: player.next, // Next track in popup
+      [IDS.shuffleBtn]: controls.shuffle.toggle, // Shuffle button in popup
+      [IDS.repeatBtn]: controls.repeat.toggle, // Repeat button in popup
+      [IDS.favoriteBtn]: () => { // Favorite heart button in popup
         if (appState.currentSong) {
           const isFavorite = appState.favorites.toggle("songs", appState.currentSong.id);
           ui.updateFavoriteButton();
@@ -1924,7 +1733,6 @@ const eventHandlers = {
       }
     });
 
-    // Tab switching in popup (now-playing, queue, recent)
     document.querySelectorAll(".popup-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         popup.switchTab(tab.dataset.tab);
@@ -1933,12 +1741,10 @@ const eventHandlers = {
     });
   },
 
-  // Bind progress bar interaction events - seek functionality
   bindProgress: () => {
-    const progressBar = $byId(IDS.popupProgressBar);
+    const progressBar = $byId(IDS.progressBar);
     if (!progressBar) return;
 
-    // Click to seek on progress bar
     progressBar.addEventListener("click", (e) => {
       if (!appState.currentSong || !appState.audio) return;
 
@@ -1949,7 +1755,6 @@ const eventHandlers = {
       controls.seekTo(newTime);
     });
 
-    // Drag functionality for progress bar
     let isDragging = false;
 
     const startDrag = (e) => {
@@ -1979,10 +1784,8 @@ const eventHandlers = {
     document.addEventListener("mouseup", endDrag);
   },
 
-  // Bind keyboard shortcuts for media controls
   bindKeyboard: () => {
     document.addEventListener("keydown", (e) => {
-      // Don't trigger shortcuts when typing in inputs
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
       const shortcuts = {
@@ -2039,24 +1842,20 @@ const eventHandlers = {
     });
   },
 
-  // Bind document-level click events for overlay management
   bindDocument: () => {
     document.addEventListener("click", (e) => {
-      // Close dropdown when clicking outside
       const dropdownMenu = $byId(IDS.dropdownMenu);
       const menuTrigger = $byId(IDS.menuTrigger);
       if (dropdownMenu && !dropdownMenu.contains(e.target) && !menuTrigger?.contains(e.target)) {
         dropdown.close();
       }
 
-      // Close popup when clicking outside
       const musicPlayer = $byId(IDS.musicPlayer);
       const nowPlayingArea = $byId(IDS.nowPlayingArea);
       if (appState.isPopupVisible && musicPlayer && !musicPlayer.contains(e.target) && !nowPlayingArea?.contains(e.target)) {
         popup.close();
       }
 
-      // Handle navigation clicks
       const navItem = e.target.closest("[data-nav]");
       if (navItem) {
         e.preventDefault();
@@ -2087,7 +1886,6 @@ const eventHandlers = {
         }
       }
 
-      // Handle search trigger
       if (e.target.closest("#" + IDS.globalSearchTrigger)) {
         e.preventDefault();
         dropdown.close();
@@ -2097,9 +1895,7 @@ const eventHandlers = {
   },
 };
 
-// Views management system - handles different page views
 const views = {
-  // Show favorite songs page
   showFavoriteSongs: () => {
     const favoriteSongIds = Array.from(appState.favorites.songs);
     if (favoriteSongIds.length === 0) {
@@ -2162,7 +1958,6 @@ const views = {
     views.bindFavoriteSongsEvents(modalEl);
   },
 
-  // Show favorite artists page
   showFavoriteArtists: () => {
     const favoriteArtistNames = Array.from(appState.favorites.artists);
     if (favoriteArtistNames.length === 0) {
@@ -2252,12 +2047,10 @@ const views = {
     views.bindFavoriteAlbumsEvents(modalEl);
   },
 
-  // Bind events for favorite songs page
   bindFavoriteSongsEvents: (root = $byId(IDS.dynamicContent)) => {
     const dynamicContent = root;
     if (!dynamicContent) return;
 
-    // Play all favorite songs button
     const playAllBtn = dynamicContent.querySelector(".play-all-btn");
     if (playAllBtn) {
       playAllBtn.addEventListener("click", () => {
@@ -2270,7 +2063,6 @@ const views = {
       });
     }
 
-    // Shuffle all favorite songs button
     const shuffleAllBtn = dynamicContent.querySelector(".shuffle-all-btn");
     if (shuffleAllBtn) {
       shuffleAllBtn.addEventListener("click", () => {
@@ -2290,7 +2082,6 @@ const views = {
       });
     }
 
-    // Song row click events
     dynamicContent.querySelectorAll(".song-row").forEach((row) => {
       row.addEventListener("click", (e) => {
         if (e.target.closest(".song-actions") || e.target.closest(".song-artist")) return;
@@ -2299,12 +2090,11 @@ const views = {
           const songData = JSON.parse(row.dataset.song);
           player.playSong(songData);
         } catch (error) {
-          console.error("Error playing song:", error);
+          
         }
       });
     });
 
-    // Artist name click events for navigation
     dynamicContent.querySelectorAll(".song-artist").forEach((artistEl) => {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2317,7 +2107,6 @@ const views = {
       });
     });
 
-    // Action button events (favorite, queue, playlist)
     dynamicContent.querySelectorAll(".action-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2346,12 +2135,10 @@ const views = {
     });
   },
 
-  // Bind events for favorite artists page
   bindFavoriteArtistsEvents: (root = $byId(IDS.dynamicContent)) => {
     const dynamicContent = root;
     if (!dynamicContent) return;
 
-    // Artist card click events for navigation
     dynamicContent.querySelectorAll(".artist-card").forEach((card) => {
       card.addEventListener("click", (e) => {
         if (e.target.closest(".play-artist-btn") || e.target.closest(".unfavorite-artist-btn")) return;
@@ -2365,7 +2152,6 @@ const views = {
       });
     });
 
-    // Play artist buttons
     dynamicContent.querySelectorAll(".play-artist-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2394,7 +2180,6 @@ const views = {
       });
     });
 
-    // Unfavorite artist buttons
     dynamicContent.querySelectorAll(".unfavorite-artist-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2459,7 +2244,6 @@ const views = {
     });
   },
 
-  // Get songs by their IDs from the music library
   getSongsByIds: (ids) => {
     if (!window.music || !ids.length) return [];
 
@@ -2502,7 +2286,6 @@ const views = {
     return albums;
   },
 
-  // Show loading spinner
   showLoading: () => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
@@ -2517,7 +2300,6 @@ const views = {
     `;
   },
 
-  // Render empty state with call-to-action
   renderEmptyState: (title, subtitle, description) => {
     return `
       <div class="empty-state-container flex items-center justify-center py-20">
@@ -2539,9 +2321,7 @@ const views = {
   },
 };
 
-// Site navigation and routing system
 const siteMap = {
-  // Initialize navigation system
   initialize: () => {
     appState.siteMapInstance = {
       routes: {
@@ -2567,13 +2347,11 @@ const siteMap = {
         },
       },
 
-      // Handle initial route on page load
       handleInitialRoute: function() {
         const path = window.location.pathname + window.location.search;
         this.handleRoute(path);
       },
 
-      // Route handler
       handleRoute: function(path) {
         let matchedRoute = false;
 
@@ -2599,7 +2377,6 @@ const siteMap = {
         }
       },
 
-      // Navigate to specific route
       navigateTo: function(routeName, params = {}) {
         let url;
 
@@ -2626,13 +2403,11 @@ const siteMap = {
         siteMap.showLoading();
       },
 
-      // Open search dialog
       openSearchDialog: siteMap.openSearchDialog,
       closeSearchDialog: siteMap.closeSearchDialog,
       updateBreadcrumb: siteMap.updateBreadcrumb,
     };
 
-    // Handle browser navigation
     window.addEventListener("popstate", () => {
       appState.siteMapInstance.handleRoute(window.location.pathname + window.location.search);
     });
@@ -2640,7 +2415,6 @@ const siteMap = {
     appState.siteMapInstance.handleInitialRoute();
   },
 
-  // Show loading animation during navigation
   showLoading: () => {
     const contentLoading = $byId(IDS.contentLoading);
     if (contentLoading) {
@@ -2651,7 +2425,6 @@ const siteMap = {
     }
   },
 
-  // Load home page
   loadHomePage: () => {
     if (appState.homePageManagerInstance) {
       const dynamicContent = $byId(IDS.dynamicContent);
@@ -2673,7 +2446,6 @@ const siteMap = {
     }
   },
 
-  // Load artist page
   loadArtistPage: (artistData) => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
@@ -2686,7 +2458,6 @@ const siteMap = {
     }, 300);
   },
 
-  // Load all artists page
   loadAllArtistsPage: () => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent || !window.music) return;
@@ -2699,7 +2470,6 @@ const siteMap = {
     }, 300);
   },
 
-  // Render artist albums section
   renderArtistAlbums: (artistData) => {
     const albumsContainer = $byId(IDS.albumsContainer);
     if (!albumsContainer) return;
@@ -2730,7 +2500,6 @@ const siteMap = {
     albumsContainer.appendChild(albumsGrid);
   },
 
-  // Handle song action buttons (favorite, queue, etc.)
   handleSongAction: (action, songData) => {
     switch (action) {
       case "favorite":
@@ -2752,7 +2521,6 @@ const siteMap = {
     }
   },
 
-  // Show playlist selector modal for adding songs
   showPlaylistSelector: (songData) => {
     if (appState.playlists.length === 0) {
       const createNew = confirm("No playlists found. Create a new playlist?");
@@ -2795,7 +2563,6 @@ const siteMap = {
 
     document.body.appendChild(modal);
 
-    // Bind modal events
     modal.querySelectorAll(".playlist-option").forEach((btn) => {
       btn.addEventListener("click", () => {
         const playlistId = btn.dataset.playlistId;
@@ -2823,7 +2590,6 @@ const siteMap = {
     });
   },
 
-  // Play all songs by an artist
   playArtistSongs: (artistData) => {
     const allSongs = [];
     artistData.albums.forEach((album) => {
@@ -2844,7 +2610,6 @@ const siteMap = {
     }
   },
 
-  // Play all songs in an album
   playAlbumSongs: (album, artistName) => {
     if (album.songs.length === 0) return;
 
@@ -2866,7 +2631,6 @@ const siteMap = {
     });
   },
 
-  // Render all artists page
   renderAllArtistsPage: () => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
@@ -2914,9 +2678,7 @@ const siteMap = {
     siteMap.bindAllArtistsEvents();
   },
 
-  // Bind events for all artists page
   bindAllArtistsEvents: () => {
-    // Artist search functionality
     const artistSearch = $byId(IDS.artistSearch);
     if (artistSearch) {
       artistSearch.addEventListener("input", (e) => {
@@ -2932,7 +2694,6 @@ const siteMap = {
       });
     }
 
-    // Genre filter functionality
     const genreFilters = $byId(IDS.genreFilters);
     if (genreFilters && window.music) {
       const genres = new Set();
@@ -2971,7 +2732,6 @@ const siteMap = {
     }
   },
 
-  // Get URL parameter by name
   getParameterByName: (name, url) => {
     name = name.replace(/[\[\]]/g, "\\$&");
     const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
@@ -2981,15 +2741,12 @@ const siteMap = {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
   },
 
-  // Open search dialog - placeholder for future implementation
   openSearchDialog: () => {
     notifications.show("Search functionality coming soon");
   },
 
-  // Close search dialog - placeholder for future implementation
   closeSearchDialog: () => {},
 
-  // Update breadcrumb navigation
   updateBreadcrumb: (items) => {
     const breadcrumbList = document.querySelector(".breadcrumb-list");
     if (!breadcrumbList) return;
@@ -3009,7 +2766,6 @@ const siteMap = {
     });
   },
 
-  // Render individual artist page
   renderArtistPage: (artistData) => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
@@ -3040,7 +2796,6 @@ const siteMap = {
     siteMap.bindArtistPageEvents(artistData);
   },
 
-  // Set up albums section with tab switching
   setupAlbumsSection: (artistData) => {
     const albumsContainer = $byId(IDS.albumsContainer);
     if (!albumsContainer || !artistData.albums.length) return;
@@ -3078,7 +2833,6 @@ const siteMap = {
     siteMap.bindAlbumSwitcher(artistData);
   },
 
-  // Display single album with songs
   displaySingleAlbum: (artistData, albumIndex) => {
     const currentAlbumDisplay = $byId("current-album-display");
     if (!currentAlbumDisplay || !artistData.albums[albumIndex]) return;
@@ -3103,11 +2857,10 @@ const siteMap = {
       currentAlbumDisplay.style.opacity = "1";
       currentAlbumDisplay.style.transform = "translateY(0)";
 
-      console.log(`Displayed album: ${album.album} with ${album.songs.length} songs`);
+      
     }, 250);
   },
 
-  // Bind album tab switching events
   bindAlbumSwitcher: (artistData) => {
     const albumTabs = document.querySelectorAll(".album-tab");
 
@@ -3127,16 +2880,15 @@ const siteMap = {
         tab.classList.remove("bg-gray-700", "text-gray-300");
 
         siteMap.displaySingleAlbum(artistData, albumIndex);
-        console.log(`Switched to album: ${albumName}`);
+        
       });
     });
   },
 
-  // Render album songs list
   renderAlbumSongs: (albumContainer, album, artistName) => {
     const songsContainer = albumContainer.querySelector(".songs-container");
     if (!songsContainer) {
-      console.warn("Songs container not found in album template");
+      
       return;
     }
 
@@ -3167,7 +2919,6 @@ const siteMap = {
       songsContainer.appendChild(songElement);
     });
 
-    // Bind song events
     songsContainer.querySelectorAll(".song-item").forEach((songItem) => {
       songItem.addEventListener("click", (e) => {
         if (e.target.closest(".song-toolbar")) return;
@@ -3175,13 +2926,12 @@ const siteMap = {
         try {
           const songData = JSON.parse(songItem.dataset.song);
           player.playSong(songData);
-          console.log(`Playing song: ${songData.title}`);
+          
         } catch (error) {
-          console.error("Error playing song:", error);
+          
         }
       });
 
-      // Bind action buttons
       songItem.querySelectorAll("[data-action]").forEach((actionBtn) => {
         actionBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -3193,12 +2943,10 @@ const siteMap = {
       });
     });
 
-    console.log(`Rendered ${album.songs.length} songs for album: ${album.album}`);
+    
   },
 
-  // Bind artist page events
   bindArtistPageEvents: (artistData) => {
-    // Play artist button - plays all artist songs
     const playButton = document.querySelector(".artist-header .play");
     if (playButton) {
       playButton.addEventListener("click", () => {
@@ -3206,7 +2954,6 @@ const siteMap = {
       });
     }
 
-    // Follow/Favorite artist button
     const followButton = document.querySelector(".artist-header .follow");
     if (followButton) {
       const isFavorite = appState.favorites.has("artists", artistData.artist);
@@ -3220,7 +2967,6 @@ const siteMap = {
       });
     }
 
-    // Album play button (for the currently displayed album)
     document.addEventListener("click", (e) => {
       const playAlbumBtn = e.target.closest(".play-album");
       if (playAlbumBtn) {
@@ -3239,16 +2985,13 @@ const siteMap = {
   },
 };
 
-// Home page management system
 const homePage = {
-  // Initialize home page manager
   initialize: () => {
     appState.homePageManagerInstance = {
       renderHomePage: homePage.render,
     };
   },
 
-  // Render complete home page
   render: () => {
     const dynamicContent = $byId(IDS.dynamicContent);
     if (!dynamicContent) return;
@@ -3316,7 +3059,6 @@ const homePage = {
 
     homePage.addStyles();
 
-    // Staggered rendering for better UX
     setTimeout(() => homePage.renderRecentlyPlayed(), 100);
     setTimeout(() => homePage.renderRandomAlbums(), 300);
     setTimeout(() => homePage.renderFavoriteArtists(), 500);
@@ -3326,7 +3068,6 @@ const homePage = {
     homePage.bindEvents();
   },
 
-  // Add custom CSS styles for home page
   addStyles: () => {
     if ($byId("bento-grid-styles")) return;
 
@@ -3635,7 +3376,6 @@ const homePage = {
     document.head.appendChild(styleEl);
   },
 
-  // Render recently played section
   renderRecentlyPlayed: () => {
     const container = $byId(IDS.recentlyPlayedSection);
     if (!container) return;
@@ -3667,7 +3407,6 @@ const homePage = {
     html += `</div>`;
     container.innerHTML = html;
 
-    // Bind events for track playing and artist navigation
     container.querySelectorAll(".recent-track").forEach((track) => {
       track.addEventListener("click", (e) => {
         if (e.target.closest(".track-artist")) return;
@@ -3676,12 +3415,11 @@ const homePage = {
           const songData = JSON.parse(track.dataset.song);
           player.playSong(songData);
         } catch (error) {
-          console.error("Error playing track:", error);
+          
         }
       });
     });
 
-    // Artist navigation events
     container.querySelectorAll(".track-artist").forEach((artistEl) => {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3695,7 +3433,6 @@ const homePage = {
     });
   },
 
-  // Render random albums section
   renderRandomAlbums: () => {
     const container = $byId(IDS.randomAlbumsSection);
     if (!container) return;
@@ -3731,7 +3468,6 @@ const homePage = {
     html += `</div>`;
     container.innerHTML = html;
 
-    // Album play functionality
     container.querySelectorAll(".album-play-btn").forEach((playBtn) => {
       playBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3741,7 +3477,6 @@ const homePage = {
       });
     });
 
-    // Album click to play
     container.querySelectorAll(".album-card").forEach((albumCard) => {
       albumCard.addEventListener("click", (e) => {
         if (e.target.closest(".album-play-btn") || e.target.closest(".album-artist")) return;
@@ -3752,7 +3487,6 @@ const homePage = {
       });
     });
 
-    // Artist navigation
     container.querySelectorAll(".album-artist").forEach((artistEl) => {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3766,7 +3500,6 @@ const homePage = {
     });
   },
 
-  // Render favorite artists section
   renderFavoriteArtists: () => {
     const container = $byId(IDS.favoriteArtistsSection);
     if (!container) return;
@@ -3800,7 +3533,6 @@ const homePage = {
     html += `</div>`;
     container.innerHTML = html;
 
-    // Artist navigation and play functionality
     container.querySelectorAll(".artist-card").forEach((artistEl) => {
       artistEl.addEventListener("click", () => {
         const artistName = artistEl.dataset.artist;
@@ -3813,7 +3545,6 @@ const homePage = {
     });
   },
 
-  // Render playlists section
   renderPlaylists: () => {
     const container = $byId(IDS.playlistsSection);
     if (!container) return;
@@ -3860,7 +3591,6 @@ const homePage = {
 
     container.innerHTML = html;
 
-    // Playlist functionality
     container.querySelectorAll(".playlist-card").forEach((playlistEl) => {
       playlistEl.addEventListener("click", () => {
         const playlistId = playlistEl.dataset.playlistId;
@@ -3879,7 +3609,6 @@ const homePage = {
     }
   },
 
-  // Render favorite songs section
   renderFavoriteSongs: () => {
     const container = $byId(IDS.favoriteSongsSection);
     if (!container) return;
@@ -3916,7 +3645,6 @@ const homePage = {
     html += `</div>`;
     container.innerHTML = html;
 
-    // Favorite songs functionality
     container.querySelectorAll(".recent-track").forEach((track) => {
       track.addEventListener("click", (e) => {
         if (e.target.closest(".track-artist") || e.target.closest(".favorite-heart")) return;
@@ -3925,12 +3653,11 @@ const homePage = {
           const songData = JSON.parse(track.dataset.song);
           player.playSong(songData);
         } catch (error) {
-          console.error("Error playing track:", error);
+          
         }
       });
     });
 
-    // Artist navigation
     container.querySelectorAll(".track-artist").forEach((artistEl) => {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3943,7 +3670,6 @@ const homePage = {
       });
     });
 
-    // Favorite heart functionality
     container.querySelectorAll(".favorite-heart").forEach((heartBtn) => {
       heartBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -3966,7 +3692,6 @@ const homePage = {
     });
   },
 
-  // Bind home page view navigation events
   bindEvents: () => {
     document.querySelectorAll("[data-view]").forEach((link) => {
       link.addEventListener("click", (e) => {
@@ -3997,7 +3722,6 @@ const homePage = {
     });
   },
 
-  // Get random albums for display
   getRandomAlbums: (count = 6) => {
     if (!window.music) return [];
 
@@ -4017,7 +3741,6 @@ const homePage = {
     return shuffled.slice(0, count);
   },
 
-  // Get songs by their IDs
   getSongsByIds: (ids) => {
     if (!window.music || !ids.length) return [];
 
@@ -4041,7 +3764,6 @@ const homePage = {
     return songs;
   },
 
-  // Play entire album
   playAlbum: (artistName, albumName) => {
     if (!window.music) return;
 
@@ -4072,7 +3794,6 @@ const homePage = {
     notifications.show(`Playing album "${albumName}"`, NOTIFICATION_TYPES.SUCCESS);
   },
 
-  // Render empty state for sections
   renderEmptyState: (message, iconType) => {
     const icons = {
       "music-note": '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>',
@@ -4093,36 +3814,28 @@ const homePage = {
   },
 };
 
-// Main application controller - CRITICAL for initialization
 const app = {
-  // Initialize entire application with all systems
   initialize: () => {
-    console.log("Initializing MyTunes app...");
+    
 
-    // Set global music reference
     window.music = music;
 
-    // Initialize core systems in proper order
     storage.initialize(); // Load saved data first
     theme.initialize(); // Apply saved theme
     notifications.initialize(); // Set up notification system
     player.initialize(); // Initialize audio player
 
-    // Initialize UI managers
     siteMap.initialize(); // Set up navigation system
     homePage.initialize(); // Set up home page manager
 
-    // Bind all event handlers - CRITICAL for functionality
     eventHandlers.init();
 
-    // Reset and sync UI state
     app.resetUI();
     app.syncGlobalState();
 
-    console.log("MyTunes app initialized successfully");
+    
   },
 
-  // Reset UI to clean state
   resetUI: () => {
     const nowPlayingArea = $byId(IDS.nowPlayingArea);
     if (nowPlayingArea) {
@@ -4131,7 +3844,6 @@ const app = {
     ui.updateCounts();
   },
 
-  // Expose API for external access and debugging
   syncGlobalState: () => {
     window.appState = appState;
     window.playerController = {
@@ -4160,7 +3872,6 @@ const app = {
     };
   },
 
-  // Helper method to navigate back to home
   goHome: () => {
     if (appState.siteMapInstance) {
       appState.siteMapInstance.navigateTo(ROUTES.HOME);
@@ -4168,19 +3879,16 @@ const app = {
   },
 };
 
-// Application initialization - CRITICAL startup sequence
 document.addEventListener("DOMContentLoaded", () => {
   app.initialize();
 });
 
-// Fallback initialization on window load
 window.addEventListener("load", () => {
   if (!window.appState) {
     app.initialize();
   }
 });
 
-// Global application interface for external access
 window.MyTunesApp = {
   initialize: app.initialize,
   state: () => appState,
@@ -4188,37 +3896,35 @@ window.MyTunesApp = {
   goHome: app.goHome,
 };
 
-// Auto-initialize if music library is already loaded
 if (window.music) {
   app.initialize();
 }
 
-// Debug function for troubleshooting - can be called from browser console
 window.debugMusicPlayer = () => {
-  console.log("=== MUSIC PLAYER DEBUG INFO ===");
-  console.log("Current song:", appState.currentSong);
-  console.log("Is popup visible:", appState.isPopupVisible);
-  console.log("Is playing:", appState.isPlaying);
+  
+  
+  
+  
 
   const musicPlayer = $byId(IDS.musicPlayer);
-  console.log("Music player element exists:", !!musicPlayer);
+  
   if (musicPlayer) {
-    console.log("Music player classes:", musicPlayer.className);
-    console.log("Music player style display:", musicPlayer.style.display);
+    
+    
   }
 
   const nowPlayingArea = $byId(IDS.nowPlayingArea);
-  console.log("Now playing area exists:", !!nowPlayingArea);
+  
   if (nowPlayingArea) {
-    console.log("Now playing area classes:", nowPlayingArea.className);
+    
   }
 
   const navbarAlbumCover = $byId(IDS.navbarAlbumCover);
-  console.log("Navbar album cover exists:", !!navbarAlbumCover);
+  
   if (navbarAlbumCover) {
-    console.log("Navbar album cover src:", navbarAlbumCover.src);
+    
   }
 
-  console.log("Audio element:", appState.audio);
-  console.log("=== END DEBUG INFO ===");
+  
+  
 };
