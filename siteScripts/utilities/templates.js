@@ -1,12 +1,18 @@
+
+////////   D E P E N D E N C I E S  //////////////////////////////
+//////////////////////////////////////////////////////////////////
 import { getAlbumImageUrl } from './parsers.js';
 
 
 
+
+
+///////////  Rendering Site Content  /////////////////////////////
+//////////////////////////////////////////////////////////////////
 export const render = {
-  // ARTIST TEMPLATES
   artist: function(templateName, data) {
     switch (templateName) {
-      case "PopOvers":
+      case "PopOvers": /////////  Similar Artists PopOvers
         const artistName = data.artist;
         const artistId = data.id || '';
         const artistImage = getArtistImageUrl(artistName);
@@ -53,7 +59,7 @@ export const render = {
 </div>`;
       
       
-      case "card":
+      case "card": /////////  Home Page Artist Cards
         return `
           <div class="artist-card rounded-xl bg-white bg-opacity-5 backdrop-blur-sm border border-white border-opacity-10 p-6 cursor-pointer hover:shadow-lg transition-all" data-artist-id="${data.id}">
             <div class="text-center">
@@ -67,7 +73,7 @@ export const render = {
           </div>
         `;
       
-      case "header":
+      case "header": /////////  Artist Pages:  Header
         return `
           <div class="artist-header" id="artist-header">
             <div class="content-wrapper">
@@ -90,7 +96,7 @@ export const render = {
           </div>
         `;
       
-      case "enhancedArtist":
+      case "enhancedArtist": /////////  Artist Pages:  FULL
         return `
           <div class="artistTop">
             <div class="artist-header" id="artist-header">
@@ -137,7 +143,7 @@ export const render = {
   // ALBUM TEMPLATES
   album: function(templateName, data) {
     switch (templateName) {
-      case "card":
+      case "card": /////////  Artist Pages: Albums (note: fix later)
         return `
           <div class="album-card p-0 rounded-2xl bg-white bg-opacity-5 backdrop-blur-sm border border-white border-opacity-5">
             <div class="albumFade" data-album-id="${data.albumId}">
@@ -160,7 +166,7 @@ export const render = {
           </div>
         `;
       
-      case "singleAlbumCard":
+      case "singleAlbumCard": /////////  Artist Pages: Albums (note: fix later)
         return `
           <div class="album-card p-0 rounded-2xl bg-white bg-opacity-5 backdrop-blur-sm border border-white border-opacity-5">
             <div class="albumFade" data-album-id="${data.albumId}">
@@ -182,7 +188,7 @@ export const render = {
           </div>
         `;
         
-      case "grid":
+      case "grid": /////////  DO NOT KNOW AT THE MOMENT (note: fix later)
         return data.albums.map(album => `
           <div class="album-grid-item" data-album="${album.album}" data-artist="${data.artist}">
             <div class="album-cover-container">
@@ -205,10 +211,9 @@ export const render = {
     }
   },
   
-  // SONG/TRACK TEMPLATES
   track: function(templateName, data) {
     switch (templateName) {
-      case "row":
+      case "row": /////////  Artist Pages: Song (note: fix later)
         return `
           <div class="song-item group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-5 transition cursor-pointer" data-song='${JSON.stringify(data.songData).replace(/"/g, "&quot;")}'>
             <div class="flex items-center flex-1 min-w-0 gap-4">
@@ -235,7 +240,7 @@ export const render = {
           </div>
         `;
       
-      case "songItem":
+      case "songItem": /////////  Artist Pages: Song (note: fix later)
         return `
           <div class="song-item group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-5 transition cursor-pointer" data-song='${data.songData}'>
             <div class="flex items-center flex-1 min-w-0 gap-4">
@@ -262,7 +267,7 @@ export const render = {
           </div>
         `;
         
-      case "nowPlaying":
+      case "nowPlaying": /////////  NOT BEING USED
         return `
           <div class="now-playing-card">
             <div class="album-art">
@@ -294,7 +299,7 @@ export const render = {
   // PAGE TEMPLATES
   page: function(templateName, data) {
     switch (templateName) {
-      case "home":
+      case "home": /////////  NOT BEING USED
         return `
           <div class="text-center py-8 md:py-12">
             <h1 class="text-4xl md:text-5xl font-bold mb-6 gradient-text">Discover Amazing Music</h1>
@@ -304,7 +309,7 @@ export const render = {
           <div id="featured-artists" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 px-4"></div>
         `;
         
-      case "allArtists":
+      case "allArtists": /////////  NEEDS TO BE BEING USED (note: fix later)
         return `
           <div class="page-header px-4 sm:px-6 py-4">
             <div class="filter-controls mb-6 flex flex-wrap gap-4 items-center">
@@ -339,8 +344,22 @@ export const render = {
         return "";
     }
   },
-  
-  // UI COMPONENTS TEMPLATES
+
+
+
+
+
+/******************** READ ME ******************/
+/**
+*
+EVERYTHING BELOW THIS COMMENT, as far as i am aware, is not being used,
+due to just an overwhelming project and several, several tasks that,
+unfortunately, got lost as well;
+
+Working on taking care of E V E R Y T H I N G
+*
+*
+*************************************************/
   ui: function(templateName, data) {
     switch(templateName) {
       case "navigationMenu":
