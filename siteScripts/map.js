@@ -1,4 +1,3 @@
-// Export all constants properly
 export const IDS = Object.freeze({
   nowPlayingArea: 'now-playing-area',
   themeToggle: 'theme-toggle',
@@ -31,13 +30,9 @@ export const IDS = Object.freeze({
   favoriteArtistsCount: 'favorite-artists-count',
   recentCount: 'recent-count',
   queueCount: 'queue-count',
-  
-  // Music Player Container & Structure
   musicPlayer: 'musicPlayer',
   playerHandle: 'handle',
   playerCloseBtn: 'closeBtn',
-  
-  // Music Player - Now Playing Content (updated from popup- prefix)
   albumCover: 'cover',
   songTitle: 'title',
   artistName: 'artist',
@@ -47,25 +42,17 @@ export const IDS = Object.freeze({
   progressBar: 'progressBar',
   progressFill: 'progressFill',
   progressThumb: 'progressThumb',
-  
-  // Music Player - Controls (updated from popup- prefix)
   playBtn: 'playBtn',
   prevBtn: 'prevBtn',
   nextBtn: 'nextBtn',
   rewindBtn: 'rewindBtn',
   forwardBtn: 'forwardBtn',
-  
-  // Music Player - Actions (updated from popup- prefix)
   favoriteBtn: 'favoriteBtn',
   queueBtn: 'queueBtn',
   shareBtn: 'shareBtn',
   moreBtn: 'moreBtn',
-  
-  // Music Player - Lists (updated from popup- prefix)
   queueList: 'queueList',
   recentList: 'recentList',
-  
-  // Main Content Areas
   dynamicContent: 'dynamic-content',
   contentLoading: 'content-loading',
   navbarAlbumCover: 'navbar-album-cover',
@@ -102,32 +89,23 @@ export const CLASSES = Object.freeze({
   imageLoaded: 'image-loaded',
   imageError: 'image-error',
   imageLoading: 'image-loading',
-  // New classes for music player
   playing: 'playing'
 });
 
-// Selectors for context-specific elements (addresses close button issue)
 export const SELECTORS = Object.freeze({
-  // Close buttons by context
   musicPlayerClose: '#musicPlayer .close',
   modalClose: '.modal .close',
   dialogClose: '#searchDialog .close',
   dropdownClose: '#dropdownMenu .close',
-  
-  // Music player specific selectors
   musicPlayerTabs: '#musicPlayer .tab',
   musicPlayerActiveTab: '#musicPlayer .tab.active',
   musicPlayerContent: '#musicPlayer .content',
   musicPlayerActiveContent: '#musicPlayer .content.active',
   musicPlayerControls: '#musicPlayer .controls .btn',
   musicPlayerActions: '#musicPlayer .actions .action',
-  
-  // Play/pause states
   playingButton: '.btn.playing',
   playIcon: '.icon.play',
   pauseIcon: '.icon.pause',
-  
-  // General reusable selectors
   closeButtons: '.close',
   activeElements: '.active',
   hiddenElements: '.hidden'
@@ -187,12 +165,8 @@ export const NOTIFICATION_TYPES = Object.freeze({
   ERROR: 'error'
 });
 
-// Enhanced helper functions
 export const getElement = (id) => {
   const element = document.getElementById(id);
-  if (!element) {
-    console.warn(`Element with ID '${id}' not found`);
-  }
   return element;
 };
 
@@ -205,7 +179,6 @@ export const getElementInContext = (contextSelector, elementSelector) => {
   return context ? context.querySelector(elementSelector) : null;
 };
 
-// Create and export the $ function
 export const $ = new Proxy({}, {
   get(_, key) {
     const id = IDS[key];
@@ -225,17 +198,11 @@ export function $allBySelector(selector) {
   return document.querySelectorAll(selector);
 }
 
-// Context-specific helper for close buttons and other reusable components
 export function $inContext(contextId, elementClass) {
   const context = document.getElementById(contextId);
   return context ? context.querySelector(`.${elementClass}`) : null;
 }
 
-// Usage examples:
-// $inContext('musicPlayer', 'close') // Gets the close button in music player
-// $inContext('searchDialog', 'close') // Gets the close button in search dialog
-
-// Also attach to window for global access if needed
 window.IDS = IDS;
 window.CLASSES = CLASSES;
 window.SELECTORS = SELECTORS;
