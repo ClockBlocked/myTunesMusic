@@ -578,10 +578,10 @@ const ui = {
     if (!appState.currentSong) return;
 
     const elements = {
-      albumCover: $byId(IDS.popupAlbumCover),
-      songTitle: $byId(IDS.popupSongTitle),
-      artistName: $byId(IDS.popupArtistName),
-      albumName: $byId(IDS.popupAlbumName),
+      albumCover: $byId(IDS.albumCover),
+      songTitle: $byId(IDS.songTitle),
+      artistName: $byId(IDS.artistName),
+      albumName: $byId(IDS.albumName),
     };
 
     if (elements.albumCover) {
@@ -645,8 +645,7 @@ const ui = {
     };
 
     const popupElements = {
-      playIcon: $byId(IDS.popupPlayIcon),
-      pauseIcon: $byId(IDS.popupPauseIcon),
+      playBtn: $byId(IDS.playBtn),
     };
 
     if (navbarElements.playIcon && navbarElements.pauseIcon) {
@@ -654,21 +653,27 @@ const ui = {
       navbarElements.pauseIcon.style.display = appState.isPlaying ? "block" : "none";
     }
 
-    if (popupElements.playIcon && popupElements.pauseIcon) {
-      popupElements.playIcon.classList.toggle(CLASSES.hidden, appState.isPlaying);
-      popupElements.pauseIcon.classList.toggle(CLASSES.hidden, !appState.isPlaying);
+    if (popupElements.playBtn) {
+      const playIcon = popupElements.playBtn.querySelector('.icon.play');
+      const pauseIcon = popupElements.playBtn.querySelector('.icon.pause');
+      if (playIcon && pauseIcon) {
+        playIcon.classList.toggle(CLASSES.hidden, appState.isPlaying);
+        pauseIcon.classList.toggle(CLASSES.hidden, !appState.isPlaying);
+      }
+      popupElements.playBtn.classList.toggle(CLASSES.playing, appState.isPlaying);
+    }
     }
   },
 
   updateShuffleButton: () => {
-    const shuffleBtn = $byId(IDS.popupShuffleBtn);
+    const shuffleBtn = $byId(IDS.shuffleBtn);
     if (shuffleBtn) {
       shuffleBtn.classList.toggle(CLASSES.active, appState.shuffleMode);
     }
   },
 
   updateRepeatButton: () => {
-    const repeatBtn = $byId(IDS.popupRepeatBtn);
+    const repeatBtn = $byId(IDS.repeatBtn);
     if (repeatBtn) {
       repeatBtn.classList.toggle(CLASSES.active, appState.repeatMode !== REPEAT_MODES.OFF);
       repeatBtn.classList.toggle(CLASSES.repeatOne, appState.repeatMode === REPEAT_MODES.ONE);
@@ -678,7 +683,7 @@ const ui = {
   updateFavoriteButton: () => {
     if (!appState.currentSong) return;
 
-    const favoriteBtn = $byId(IDS.popupFavoriteBtn);
+    const favoriteBtn = $byId(IDS.favoriteBtn);
     if (favoriteBtn) {
       const isFavorite = appState.favorites.has("songs", appState.currentSong.id);
       favoriteBtn.classList.toggle(CLASSES.active, isFavorite);
@@ -1706,13 +1711,13 @@ const eventHandlers = {
 
   bindPopups: () => {
     const popupControls = {
-      [IDS.popupClose]: popup.close, // Close popup button
-      [IDS.popupPlayPauseBtn]: player.toggle, // Play/pause in popup - CRITICAL
-      [IDS.popupPrevBtn]: player.previous, // Previous track in popup
-      [IDS.popupNextBtn]: player.next, // Next track in popup
-      [IDS.popupShuffleBtn]: controls.shuffle.toggle, // Shuffle button in popup
-      [IDS.popupRepeatBtn]: controls.repeat.toggle, // Repeat button in popup
-      [IDS.popupFavoriteBtn]: () => { // Favorite heart button in popup
+      [IDS.closeBtn]: popup.close, // Close popup button
+      [IDS.playBtn]: player.toggle, // Play/pause in popup - CRITICAL
+      [IDS.prevBtn]: player.previous, // Previous track in popup
+      [IDS.nextBtn]: player.next, // Next track in popup
+      [IDS.shuffleBtn]: controls.shuffle.toggle, // Shuffle button in popup
+      [IDS.repeatBtn]: controls.repeat.toggle, // Repeat button in popup
+      [IDS.favoriteBtn]: () => { // Favorite heart button in popup
         if (appState.currentSong) {
           const isFavorite = appState.favorites.toggle("songs", appState.currentSong.id);
           ui.updateFavoriteButton();
@@ -1737,7 +1742,7 @@ const eventHandlers = {
   },
 
   bindProgress: () => {
-    const progressBar = $byId(IDS.popupProgressBar);
+    const progressBar = $byId(IDS.progressBar);
     if (!progressBar) return;
 
     progressBar.addEventListener("click", (e) => {
